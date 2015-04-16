@@ -1,0 +1,107 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>uk.gov.scotland.afrc.poc</groupId>
+  <artifactId>CamelSpringBatchOnFuseSpring</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <packaging>bundle</packaging>
+  <properties>
+  		<camel.version>2.10.0.redhat-60024</camel.version>
+  		<asm-all.version>4.1</asm-all.version>
+  		<org.osgi.version>4.2.0</org.osgi.version>
+  </properties>
+  
+  <dependencies>
+  		<dependency>
+			<groupId>org.ow2.asm</groupId>
+			<artifactId>asm-all</artifactId>
+			<version>${asm-all.version}</version>
+			<scope>test</scope>
+		</dependency>
+		
+		<dependency>
+			<groupId>org.apache.camel</groupId>
+			<artifactId>camel-core</artifactId>
+			<version>${camel.version}</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>org.apache.camel</groupId>
+			<artifactId>camel-jms</artifactId>
+		<version>${camel.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.camel</groupId>
+			<artifactId>camel-jpa</artifactId>
+			<version>${camel.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.camel</groupId>
+			<artifactId>camel-quartz</artifactId>
+			<version>${camel.version}</version>
+  		</dependency>
+		<dependency>
+			<groupId>org.apache.camel</groupId>
+			<artifactId>camel-sql</artifactId>
+			<version>${camel.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.camel</groupId>
+			<artifactId>camel-soap</artifactId>
+			<version>${camel.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.camel</groupId>
+			<artifactId>camel-spring</artifactId>
+			<version>${camel.version}</version>
+		</dependency>
+  		<dependency>
+			<groupId>org.apache.camel</groupId>
+			<artifactId>camel-spring-batch</artifactId>
+			<version>2.11.0</version>
+		</dependency> 
+		<dependency>
+  			<groupId>org.springframework.batch</groupId>
+			<artifactId>spring-batch-core</artifactId>
+			<version>2.1.9.RELEASE</version>
+    		</dependency>
+  		<dependency>
+  			<groupId>org.springframework.batch</groupId>
+			<artifactId>spring-batch-infrastructure</artifactId>
+			<version>2.1.9.RELEASE</version>
+ 		</dependency>
+  </dependencies>
+  
+  <build>
+  
+  	<plugins>
+  		<plugin>
+				<groupId>org.apache.felix</groupId>
+				<artifactId>maven-bundle-plugin</artifactId>
+				<extensions>true</extensions>
+				<configuration>
+					<instructions>
+						<Bundle-SymbolicName>${project.groupId}-${project.artifactId}</Bundle-SymbolicName>
+						<DynamicImport-Package>*</DynamicImport-Package>
+						<Require-Bundle>org.apache.cxf.bundle</Require-Bundle>
+						<Import-Package>
+							org.springframework.batch.core;version=2.1.9.RELEASE,
+							org.springframework.batch.core.repository;version=2.1.9.RELEASE,
+							org.springframework.batch.core.job;version=2.1.9.RELEASE,
+							org.springframework.batch.core.scope;version=2.1.9.RELEASE,
+							org.springframework.batch.core.step;version=2.1.9.RELEASE,
+							org.springframework.batch.repeat;version=2.1.9.RELEASE,
+							org.springframework.batch.core.job.flow.support;version=2.1.9.RELEASE,
+							org.springframework.batch.core.job.flow.support.state;version=2.1.9.RELEASE,
+							org.springframework.batch.core.configuration.xml;version=2.1.9.RELEASE,
+							org.springframework.batch.item.file.transform;version=2.1.9.RELEASE,
+							org.apache.camel.component.spring.batch.support;version=2.10.0.redhat-60024,
+							*
+						</Import-Package>
+						<!-- Unable to find Caused by: java.lang.ClassNotFoundException: org.springframework.batch.core.JobExecution -->
+					</instructions>
+				</configuration>
+			</plugin>
+  	</plugins>
+  </build>
+  
+</project>
