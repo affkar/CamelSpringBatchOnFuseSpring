@@ -1,0 +1,120 @@
+<!--
+  Licensed to the Apache Software Foundation (ASF) under one or more
+  contributor license agreements.  See the NOTICE file distributed with
+  this work for additional information regarding copyright ownership.
+  The ASF licenses this file to You under the Apache License, Version 2.0
+  (the "License"); you may not use this file except in compliance with
+  the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:bp="http://www.osgi.org/xmlns/blueprint/v1.0.0"
+	   xmlns:osgi="http://www.springframework.org/schema/osgi"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:camel="http://camel.apache.org/schema/spring"
+       xmlns:batch="http://www.springframework.org/schema/batch"
+       xsi:schemaLocation="
+		  http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd
+		  http://www.springframework.org/schema/osgi http://www.springframework.org/schema/osgi/spring-osgi.xsd
+          http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+          http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd
+          http://www.springframework.org/schema/batch http://www.springframework.org/schema/batch/spring-batch-2.1.xsd">
+
+    <camel:camelContext id="camel">
+        <camel:route>
+            <camel:from uri="quartz://payCalcJobs1/payCalc1?cron=0/5+*+*+?+*+*"/>
+            <camel:to uri="log:com.hibiscus.batchtrigger?level=INFO"/>
+            <camel:to uri="spring-batch:copyFuturesUserJob"/> 
+        </camel:route>
+        <camel:route>
+        	<!-- <camel:from uri="quartz://payCalcJobs1/payCalc1?cron=0/5+*+*+?+*+*"/> -->
+        	<camel:from uri="direct:dbquery"/>
+        	<camel:setBody>
+        		<camel:constant>select * from FUTURES_USER</camel:constant>
+        	</camel:setBody>
+        	<camel:to uri="jdbc:datasource"/>
+        	<camel:to uri="log:com.hibiscus.reader?level=INFO"/>
+        	<camel:setBody>
+        		<camel:constant>Read</camel:constant>
+        	</camel:setBody>
+        	<camel:to uri="log:com.hibiscus.reader?level=INFO"/>
+        </camel:route>
+        <camel:route>
+        	<camel:from uri="direct:processor"/>
+        	<camel:setBody>
+        		<camel:constant>Processed</camel:constant>
+        	</camel:setBody>
+        	<camel:to uri="log:com.hibiscus.processor?level=INFO"/>
+        </camel:route>
+        <camel:route>
+        	<camel:from uri="direct:writer"/>
+        	<camel:setBody>
+        		<camel:constant>Written</camel:constant>
+        	</camel:setBody>
+        	<camel:to uri="log:com.hibiscus.writer?level=INFO"/>
+        </camel:route>
+    </camel:camelContext>
+    
+    <!-- Batch Job Definition -->
+    <batch:job id="copyFuturesUserJob">
+        <batch:step id="echoStep">
+            <batch:tasklet transaction-manager="transactionManager">
+                <batch:chunk reader="camelReader" processor="camelProcessor" writer="camelWriter" commit-interval="5"/>
+            </batch:tasklet>
+        </batch:step>
+        <!-- <batch:listeners>
+            <batch:listener ref="camelJobExecutionListener"/>
+        </batch:listeners> -->
+    </batch:job>
+    
+	<!-- Item Reader -->
+    <bean id="camelReader" class="org.apache.camel.component.spring.batch.support.CamelItemReader" scope="step">
+        <constructor-arg ref="consumerTemplate"/>
+        <constructor-arg value="direct:dbquery"/>
+    </bean>
+    
+    <!-- Item Processor -->
+    <bean id="camelProcessor" class="org.apache.camel.component.spring.batch.support.CamelItemProcessor">
+        <constructor-arg ref="producerTemplate"/>
+        <constructor-arg value="direct:processor"/>
+    </bean>
+    
+    <!-- Item Writer -->
+    <bean id="camelWriter" class="org.apache.camel.component.spring.batch.support.CamelItemWriter" scope="step" >
+		<constructor-arg ref="producerTemplate"/>
+        <constructor-arg value="direct:writer"/>
+	</bean>
+	
+	<!-- Camel Templates for use by Spring batch ItemReader, ItemProcessor and ItemWriter  -->
+	<camel:consumerTemplate id="consumerTemplate" camelContextId="camel"/>
+    <camel:template id="producerTemplate" camelContextId="camel"/>
+    
+	<!-- OSGI Reference that we would like to inject -->
+    <osgi:reference id="datasource"
+		interface="javax.sql.DataSource" filter="(osgi.jndi.service.name=jdbc/AppDataSource)" />
+<!--     <osgi:reference id="someOSGIServiceRef"
+		interface="someosgi.OperationalCustomerService" /> -->
+		
+	<!-- Transaction Manager for use by Spring batch. Fails job creation without this -->
+	<bean id="transactionManager" class="org.springframework.batch.support.transaction.ResourcelessTransactionManager"/>
+	
+	<!-- Job Repository for use by Spring batch. Fails job creation without this -->
+	<bean id="jobRepository"
+          class="org.springframework.batch.core.repository.support.MapJobRepositoryFactoryBean">
+        <property name="transactionManager" ref="transactionManager"/>
+    </bean>
+    
+    <!-- JobLauncher for use by spring batch. Fails execution without this. -->
+    <bean id="jobLauncher"
+          class="org.springframework.batch.core.launch.support.SimpleJobLauncher">
+        <property name="jobRepository" ref="jobRepository"/>
+    </bean>
+    
+</beans>
